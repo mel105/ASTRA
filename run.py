@@ -13,7 +13,6 @@ from Src.process_ts import process_ts
 from jinja2 import Environment, FileSystemLoader
 from Src.support import check_folder
 from xhtml2pdf import pisa
-from flask import Flask, redirect, url_for, render_template, request
 
 
 def get_version_table():
@@ -27,11 +26,12 @@ def get_version_table():
 
     # data, ktore by sa mali nejak editovat. Sluzi mi to hlavne pre nacvicenie vyrobi html reportu.
     edit_data = {
-        "Version": ["0.0.1"],
-        "Author": ["MEL"],
-        "DATE": ["2023-09-18"],
+        "Version": ["0.0.1", "0.0.2"],
+        "Author": ["MEL", "MEL"],
+        "DATE": ["2023-09-18", "2023-09-26"],
         "Main contribution": [
             "Basic variant of html report that includes the PWV Time Series homogenization results",
+            "Basic version of change point algorithm is implemented",
         ],
     }
 

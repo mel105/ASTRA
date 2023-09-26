@@ -1,40 +1,26 @@
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
+    
     <head lang="en">
-    <meta charset="UTF-8">
-	
-	<title>REPORT OF PWV TIME SERIES HOMOGENIZATION</title>
-	
-    <link rel="stylesheet" type="text/css" href="style.css" />
+        <meta charset="utf-8">
+    	
+    	<title>REPORT OF PWV TIME SERIES HOMOGENIZATION</title>
+    	<link rel="stylesheet" href="https://cdn.simplecss.org/simple.css">
+        <link rel="stylesheet" href="style.css">
     
     </head>
+    
     <body>
     
-    <h1>Introduction</h1>
-	<p>Data are given by ...</p>
-	<h2>Version of the document</h2>
-	{{version_table.to_html()}}
-	<p>Last-update <em>{{ docu_gen_time }}</em></p>
-	<h2>List of analysed stations</h2>
-	{{info_table.to_html(render_links=True,escape=False)}}
-	
-	<h1>Transformace</h1>
-	
-	
-	<h2>Posuň mě</h2>
-	
-	<div class="obdelnik posun"></div>
-	
-	
-	<h2>Otoč mě</h2>
-	
-	<div class="obdelnik rotace"></div>
-	
-	
-	<h2>Zvětši mě</h2>
-	
-	<div class="obdelnik zvetseni"></div>
+        <h1>Introduction</h1>
+    	<p>Data are given by ...</p>
+    	<h2>Version of the document</h2>
+    	{{version_table.to_html()}}
+    	<p>Last-update <em>{{ docu_gen_time }}</em></p>
+    	<h2>List of analysed stations</h2>
+    	{{info_table.to_html(render_links=True,escape=False)}}
+    	
 	
     </body>
 </html>

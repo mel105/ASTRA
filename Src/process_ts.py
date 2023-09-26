@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
+import Src.changePointDetection as chp
 pio.renderers.default = 'browser'
 
 
@@ -57,6 +58,9 @@ class process_ts:
         self._end_reset = conf.get_end()
         self._preprocess = conf.get_preprocess()
 
+        # because i need the config to change point method, then
+        self._conf = conf
+
         if self._preprocess:
             # prepare data for LOKI. Meaning, create the differences time series given as ERA-GNSS.
             self._dataToLOKI()
@@ -66,6 +70,9 @@ class process_ts:
 
             # median year estimation
             self._create_median_year()
+
+            # change point detection
+            self._detectChangePoints()
 
             # ts homogenization
             self._homogenization()
@@ -132,6 +139,63 @@ class process_ts:
             return self._fig4
 
     # protected functions
+
+    def _detectChangePoints(self):
+        """
+        Functions prepare the series and run the methods for change point detection
+
+        Returns
+        -------
+        None.
+
+        """
+
+        # Do we have available the reference time series? If we do not, then distribute the median series via
+        # whole data range
+
+        dis = pd.DataFrame()
+        dis["epochs"] = pd.date_range(start="1/1/"+str(self._beg_reset),
+                                      end="1/1/"+str(self._end_reset+1), freq="6h")
+        dis["YM"] = dis.epochs.dt.strftime("%m-%d-%H")
+
+        med = pd.merge(dis, self._dfmedian, on="YM")
+        med = med.sort_values("epochs")
+
+        ref = med[["epochs", "pwv"]].copy()
+        anl = self._dfflt[["epochs", "pwv"]].copy()
+
+        chp.changePointDetection(self._conf, anl, ref)
+
+        # In case, the plot is required
+# =============================================================================
+#         fo_data = go.Figure()
+#         fo_data.add_trace(go.Scatter(x=anl.epochs, y=anl.pwv, mode="lines"))
+#         fo_data.add_trace(go.Scatter(x=ref.epochs, y=ref.pwv, mode="lines"))
+#         fo_data.update_layout(
+#             title="Analysed series vs reference time series",
+#             autosize=False,
+#             width=800,
+#             height=400,
+#             yaxis=dict(
+#                 autorange=True,
+#                 showgrid=True,
+#                 zeroline=True,
+#                 dtick=250,
+#                 gridcolor="rgb(255, 255, 255)",
+#                 gridwidth=1,
+#                 zerolinecolor="rgb(255, 255, 255)",
+#                 zerolinewidth=2,
+#             ),
+#             margin=dict(l=40, r=30, b=80, t=100,),
+#             paper_bgcolor="rgb(243, 243, 243)",
+#             plot_bgcolor="rgb(243, 243, 243)",
+#             showlegend=False,
+#         )
+#         fo_data.show()
+# =============================================================================
+
+        return 0
+
     def _dataToLOKI(self):
         """
         Function prepares the data for LOKI application. In next stpers: 1) reading the GNSS and ERA5 data,
@@ -251,7 +315,7 @@ class process_ts:
             showlegend=False,
         )
 
-        self._fig1 = fig1
+        self._fig1 = fig1  # chp.get_chp_fig()
 
         # adjusted series
         fig2 = go.Figure()
