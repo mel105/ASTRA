@@ -9,21 +9,25 @@ Created on Mon Sep 18 19:44:07 2023
 # import os
 import sys
 import statistics as stat
-import matplotlib.pyplot as plt
-import os
+# import matplotlib.pyplot as plt
+from plotly.subplots import make_subplots
+# import os
 from pathlib import Path
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
-import Src.changePointDetection as chp
+from Src.changePointDetection import changePointDetection
+# import Src.changePointDetection as chp
 pio.renderers.default = 'browser'
 
 
 class process_ts:
 
     """
-    The class should use config settings and process the time series
+    The class should use config settings and process the time series in context of change point detection and
+    time series homogenization. There is an assumption that we have available as analysed series as well as
+    reference time series.
     """
 
     def __init__(self, conf, file_idx):
@@ -61,82 +65,34 @@ class process_ts:
         # because i need the config to change point method, then
         self._conf = conf
 
-        if self._preprocess:
-            # prepare data for LOKI. Meaning, create the differences time series given as ERA-GNSS.
-            self._dataToLOKI()
-        else:
-            # read the npz file> GNSS data
-            self._read_npz_file()
+        # data reading
+        self._dataReading()
 
-            # median year estimation
-            self._create_median_year()
+        # change point detection
+        self._detectChangePoints()
 
-            # change point detection
-            self._detectChangePoints()
+        # tech support
+        self._homogenizationPlot()
 
-            # ts homogenization
-            self._homogenization()
+        self._outliers()
+        self._outliersPlot()
+        self._outlierReplacement()
 
     # public get/set functions
-    def get_full_data(self):
-        """
-        Function returns the original data with original time resolution
-
-        Returns
-        -------
-        None.
-
-        """
-
-        return self._dffull
-
-    def get_flt_data(self):
-        """
-        Function returns the filtered/reduced dataframe that contains another usefull columns
-
-        Returns
-        -------
-        None.
-
-        """
-
-        return self._dfflt
-
-    def get_my_data(self):
-        """
-        Function returns the median year series
-
-        Returns
-        -------
-        None.
-
-        """
-
-        return self._dfmedian
-
     def get_orig_fig(self):
-        if self._preprocess:
-            return go.Figure()
-        else:
-            return self._fig1
+        return self._fig
 
     def get_chp_fig(self):
-        if self._preprocess:
-            return go.Figure()
-        else:
-            return self._fig2
+        return self._fig_chp
+
+    def get_adj_fig(self):
+        return self._fig_adj
 
     def get_out_fig(self):
-        if self._preprocess:
-            return go.Figure()
-        else:
-            return self._fig3
+        return self._fig_out
 
     def get_homo_fig(self):
-        if self._preprocess:
-            return go.Figure()
-        else:
-            return self._fig4
+        return self._fig_repl
 
     # protected functions
 
@@ -150,53 +106,93 @@ class process_ts:
 
         """
 
-        # Do we have available the reference time series? If we do not, then distribute the median series via
-        # whole data range
+        # copy of time series that will be homogenized
+        self._homo = self._data[["pwv GNSS"]].copy()
 
-        dis = pd.DataFrame()
-        dis["epochs"] = pd.date_range(start="1/1/"+str(self._beg_reset),
-                                      end="1/1/"+str(self._end_reset+1), freq="6h")
-        dis["YM"] = dis.epochs.dt.strftime("%m-%d-%H")
+        # change point detection
+        chp = changePointDetection(self._conf, self._data)
 
-        med = pd.merge(dis, self._dfmedian, on="YM")
-        med = med.sort_values("epochs")
+        # results
+        _point, _index, _shift = chp.get_chp()
 
-        ref = med[["epochs", "pwv"]].copy()
-        anl = self._dfflt[["epochs", "pwv"]].copy()
+        # plot
+        self._fig_chp = chp.get_chp_plot()
 
-        chp.changePointDetection(self._conf, anl, ref)
+        # MULTICHANGE POINT DETECTION
+        # Spliting the original series into sub-series in case that the chp was detected
+        # listOfChp = []
+        subseries = []
 
-        # In case, the plot is required
-# =============================================================================
-#         fo_data = go.Figure()
-#         fo_data.add_trace(go.Scatter(x=anl.epochs, y=anl.pwv, mode="lines"))
-#         fo_data.add_trace(go.Scatter(x=ref.epochs, y=ref.pwv, mode="lines"))
-#         fo_data.update_layout(
-#             title="Analysed series vs reference time series",
-#             autosize=False,
-#             width=800,
-#             height=400,
-#             yaxis=dict(
-#                 autorange=True,
-#                 showgrid=True,
-#                 zeroline=True,
-#                 dtick=250,
-#                 gridcolor="rgb(255, 255, 255)",
-#                 gridwidth=1,
-#                 zerolinecolor="rgb(255, 255, 255)",
-#                 zerolinewidth=2,
-#             ),
-#             margin=dict(l=40, r=30, b=80, t=100,),
-#             paper_bgcolor="rgb(243, 243, 243)",
-#             plot_bgcolor="rgb(243, 243, 243)",
-#             showlegend=False,
-#         )
-#         fo_data.show()
-# =============================================================================
+        if chp.get_chp_result():
+
+            # Homogenization
+            self._homo[_index:] = self._homo[_index:]+_shift
+
+            subseries = self._update(self._data, _index, subseries)
+
+            # pokial kontainer subseries nie je prazdny, tak iterurej
+            tst = True
+            idx = 0
+            while (tst):
+
+                # MELTODO: POZOR NA CONF. Potrebuje ho len kvoli beg, end. Ale ak zmenim rozsah casovej rady
+                # tak mi tento konf je k nicomu.
+                actual_data = pd.DataFrame(subseries[idx])
+                chp = changePointDetection(self._conf, actual_data)
+
+                if chp.get_chp_result():
+                    # odtranenie tej subserie, ktora uz bola spracovana
+                    subseries.pop(idx)
+                    _, _idx, _sft = chp.get_chp()
+
+                    # homogenization. MELTODO Tu je to spatne. To z dovodu, ze idx  spocitam len v
+                    # subintervale musim mu nejak priradit idx original.
+                    self._homo[_idx:] = self._homo[_idx:]+_sft
+
+                    # update
+                    subseries = self._update(actual_data, _idx, subseries)
+                    idx = 0
+                else:
+                    subseries.pop(idx)
+
+                if len(subseries) == 0:
+                    tst = False
+                else:
+                    print("Iteration")
+        else:
+            print("No change point was detected!")
 
         return 0
 
-    def _dataToLOKI(self):
+    def _update(self, data, idx, subs):
+        """
+        Function returns actual list of subseries intervals
+
+        Returns
+        -------
+        None.
+
+        """
+
+        subs_orig = subs.copy()
+
+        listOfSubseries = []
+
+        subdata_1 = data.iloc[:idx]
+        subdata_2 = data.iloc[idx:]
+
+        listOfSubseries = [subdata_1, subdata_2]
+
+        # save subseries into the container
+        # for key, val in enumerate(listOfSubseries):
+        #    subs[key] = val
+
+        if (len(subs_orig) == 0):
+            return listOfSubseries
+        else:
+            return subs_orig+listOfSubseries
+
+    def _dataReading(self):
         """
         Function prepares the data for LOKI application. In next stpers: 1) reading the GNSS and ERA5 data,
         2) creatinf the difference time series, 3) prepare the txt file in format: yyyy-mm-dd hh-mm-ss dpwv
@@ -210,25 +206,46 @@ class process_ts:
 
         """
 
+        # analysed time series
         self._read_npz_file()
-        self._gnss = self._dfflt.copy()
+        # for purpose of chp detection, just create the copy of gnss df
+        self._anl = self._gnss[["epochs", "pwv"]].copy()
+        # for purpose of data merging
         self._gnss = self._gnss.set_index("epochs")
 
+        if self._anl.empty:
+            print("No analysed data!")
+        else:
+            print("Analysed data reading: OK")
+
+        # reference time series
         self._read_txt_file()
-        self._era5 = self._dfflt.copy()
+        # for purpose as in gnss case
+        self._ref = self._era5[["epochs", "pwv"]].copy()
+        # for purpose of data merging
         self._era5 = self._era5.set_index("epochs")
+
+        if self._ref.empty:
+            print("No reference data!")
+        else:
+            print("Reference data reading: OK")
 
         # time series difference
         mergedSeries = pd.merge(self._gnss, self._era5, how='inner', left_index=True, right_index=True)
         mergedSeries = mergedSeries.reset_index()
-        mergedSeries.columns = ["epochs", "index GNSS", "pwv GNSS", "sigma GNSS", "index ERA5", "pwv ERA5"]
-        mergedSeries["dpwv"] = mergedSeries["pwv ERA5"] - mergedSeries["pwv GNSS"]
+        mergedSeries.columns = ["epochs", "pwv GNSS", "sigma GNSS", "pwv ERA5"]
+        mergedSeries["dpwv"] = mergedSeries["pwv GNSS"] - mergedSeries["pwv ERA5"]
+        self._data = mergedSeries.copy()
 
-        # plot the series
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=mergedSeries.epochs, y=mergedSeries.dpwv, mode="lines"))
+        # fig creation
+        fig = make_subplots(rows=2, cols=1)
+        fig.add_trace(go.Scatter(x=mergedSeries.epochs,
+                      y=mergedSeries["pwv GNSS"], mode="lines"), row=1, col=1)
+        fig.add_trace(go.Scatter(x=mergedSeries.epochs,
+                      y=mergedSeries["pwv ERA5"], mode="lines"), row=1, col=1)
+        fig.add_trace(go.Scatter(x=mergedSeries.epochs, y=mergedSeries.dpwv, mode="lines"), row=2, col=1)
         fig.update_layout(
-            title="ERA5 - GNSS difference time serties",
+            title="Input time series comparision",
             autosize=False,
             width=800,
             height=400,
@@ -247,80 +264,25 @@ class process_ts:
             plot_bgcolor="rgb(243, 243, 243)",
             showlegend=False,
         )
+        fig.update_xaxes(title_text=" ", row=1, col=1)
+        fig.update_xaxes(title_text="Time [#6 hours]", row=2, col=1)
+        fig.update_yaxes(title_text="PWV [mm]", row=1, col=1)
+        fig.update_yaxes(title_text="DIFF PWV [mm]", row=2, col=1)
 
-        fig.show()
+        # fig.show()
 
-        # save the differenced time eries
-        mergedSeries = mergedSeries.drop(
-            ["index GNSS", "index ERA5", "pwv GNSS", "pwv ERA5", "sigma GNSS"], axis=1)
-        mergedSeries.to_csv(r"Res/toLOKI/"+self._station+"_dpwv.txt", header=None, index=None, sep='\t')
+        self._fig = fig
 
         return 0
 
-    def _homogenization(self):
+    def _homogenizationPlot(self):
 
-        # if the list of change points exists, read the list
-        chppath = 'Data/LOKI/LOKI.chp'
-        chpCols = ['STATION', 'IDX', 'DATE', 'SHIFT']
-        if os.path.exists(chppath):
-
-            # self._dfchp = pd.read_csv(chppath, header=None, names=chpCols, skiprows=1)
-            self._dfchp = pd.read_csv(chppath, sep="  ", header=None, names=chpCols, engine="python")
-
-        # Find actually analysed station in the list of change points and provide the time series adjusting.
-        # if the change poinst exist
-
-        # copy of fitered series
-        tsAdj = self._dfflt.pwv.copy()
-
-        # plot the data (TODO PLOTS in own class and manage from config.)
-        # original series+detected change point
-        fig1 = go.Figure()
-        fig1.add_trace(go.Scatter(x=self._dfflt.epochs, y=self._dfflt.pwv, mode="lines"))
-        # Test if Station exists in the list of change points
-        if((self._dfchp['STATION'].eq(self._station)).any()):
-
-            # TODO: probably bad altitide from programming point of view to adjust over loop. Reconstruct!!!
-            for index, row in self._dfchp.iterrows():
-                if row["STATION"] == self._station:
-                    print(row['STATION'], row["DATE"], row['SHIFT'])
-                    idx = row["IDX"]
-                    tsAdj[idx:] = tsAdj[idx:]+row["SHIFT"]
-                    fig1.add_vline(x=row["DATE"], line_width=3, line_color="red", line_dash="dash")
-                    # ax1.axvline(x=pd.Timestamp(row["DATE"]), color="r", label="aa")
-
-            self._dfflt["ADJ"] = tsAdj
-
-        else:
-            print("KO")
-
-        fig1.update_layout(
-            title="Original time series and presentation of detected change-point(s)",
-            autosize=False,
-            width=800,
-            height=400,
-            yaxis=dict(
-                autorange=True,
-                showgrid=True,
-                zeroline=True,
-                dtick=250,
-                gridcolor="rgb(255, 255, 255)",
-                gridwidth=1,
-                zerolinecolor="rgb(255, 255, 255)",
-                zerolinewidth=2,
-            ),
-            margin=dict(l=40, r=30, b=80, t=100,),
-            paper_bgcolor="rgb(243, 243, 243)",
-            plot_bgcolor="rgb(243, 243, 243)",
-            showlegend=False,
-        )
-
-        self._fig1 = fig1  # chp.get_chp_fig()
+        self._data["HOM"] = self._homo
 
         # adjusted series
-        fig2 = go.Figure()
-        fig2.add_trace(go.Scatter(x=self._dfflt["epochs"], y=self._dfflt["ADJ"], mode="lines"))
-        fig2.update_layout(
+        fig_adj = go.Figure()
+        fig_adj.add_trace(go.Scatter(x=self._data["epochs"], y=self._data.HOM, mode="lines"))
+        fig_adj.update_layout(
             title="Adjusted time series",
             autosize=False,
             width=800,
@@ -341,25 +303,35 @@ class process_ts:
             showlegend=False,
         )
 
-        self._fig2 = fig2
+        fig_adj.show()
+        self._fig_adj = fig_adj
+
+    def _outliers(self):
 
         # Outliers replacing by median
-        med1 = stat.median(self._dfflt.ADJ)
-        self._dfflt["RED"] = abs(self._dfflt.ADJ-med1)
-        MAD = stat.median(self._dfflt.RED)
+        self._med1 = stat.median(self._data.HOM)
+
+        self._data["RED"] = abs(self._data.HOM-self._med1)
+
+        MAD = stat.median(self._data.RED)
+
         # Tukey's fence
-        low = med1 - 4.45*MAD
-        upp = med1 + 4.45*MAD
+        low = self._med1 - 4.45*MAD
+        upp = self._med1 + 4.45*MAD
 
         # outlier indexes
-        lowidx = self._dfflt.ADJ.lt(low)
-        uppidx = self._dfflt.ADJ.gt(upp)
+        self._lowidx = self._data.HOM.lt(low)
+        self._uppidx = self._data.HOM.gt(upp)
 
-        fig3 = go.Figure()
-        fig3.add_trace(go.Scatter(x=self._dfflt.epochs, y=self._dfflt.ADJ, mode="lines"))
-        fig3.add_trace(go.Scatter(x=self._dfflt.epochs[lowidx], y=self._dfflt.ADJ[lowidx], mode="lines"))
-        fig3.add_trace(go.Scatter(x=self._dfflt.epochs[uppidx], y=self._dfflt.ADJ[uppidx], mode="markers"))
-        fig3.update_layout(
+    def _outliersPlot(self):
+
+        fig_out = go.Figure()
+        fig_out.add_trace(go.Scatter(x=self._data.epochs, y=self._data.HOM, mode="lines"))
+        fig_out.add_trace(go.Scatter(x=self._data.epochs[self._lowidx],
+                                     y=self._data.HOM[self._lowidx], mode="lines"))
+        fig_out.add_trace(go.Scatter(x=self._data.epochs[self._uppidx],
+                                     y=self._data.HOM[self._uppidx], mode="markers"))
+        fig_out.update_layout(
             title="Presentation the outliers in analysed time series",
             autosize=False,
             width=800,
@@ -379,17 +351,19 @@ class process_ts:
             plot_bgcolor="rgb(243, 243, 243)",
             showlegend=False,
         )
-        self._fig3 = fig3
+        fig_out.show()
+        self._fig_out = fig_out
+
+    def _outlierReplacement(self):
 
         # replace the outlier values by the median ones
-        self._dfflt["HOM"] = self._dfflt.ADJ
-        self._dfflt.loc[lowidx, "HOM"] = med1
-        self._dfflt.loc[uppidx, "HOM"] = med1
+        self._data.loc[self._lowidx, "HOM"] = self._med1
+        self._data.loc[self._uppidx, "HOM"] = self._med1
 
-        fig4 = go.Figure()
-        fig4.add_trace(go.Scatter(x=self._dfflt.epochs, y=self._dfflt.HOM, mode="lines"))
-        fig4.update_layout(
-            title="Homogenized time series",
+        fig_repl = go.Figure()
+        fig_repl.add_trace(go.Scatter(x=self._data.epochs, y=self._data.HOM, mode="lines"))
+        fig_repl.update_layout(
+            title="Time series cleaned of outliers",
             autosize=False,
             width=800,
             height=400,
@@ -408,38 +382,12 @@ class process_ts:
             plot_bgcolor="rgb(243, 243, 243)",
             showlegend=False,
         )
-        self._fig4 = fig4
-
-        # convert and save the container into the ascii file
-        # elf._dfflt = self._dfflt.drop(columns=["index", "YM"])
-        # self._dfflt.to_csv("Data/TXT/"+self._station+".txt", index=None, sep=" ",
-        #                    header=False, date_format=("%Y-%m-%d\t%H:%M:%S").replace(' " ', '  '))
-
-    def _create_median_year(self):
-        """
-        Function returns so called Median year usefull for missing data or outlier data replacement. Median 
-        year dataframe is also useful for seasonality removing.
-
-        Returns
-        -------
-        None.
-
-        """
-
-        # median year
-        #  algorithm based on "contingency table"
-        self._dfext = self._dfflt.copy()
-        self._dfext["YM"] = [i.strftime("%m-%d-%H") for i in list(self._dfflt.epochs)]
-        self._dfext = self._dfext.reset_index()
-
-        self._dfmedian = self._dfext.groupby(["YM"]).median(numeric_only=True)
-        self._dfmedian = self._dfmedian.reset_index()
-
-        return 0
+        fig_repl.show()
+        self._fig_repl = fig_repl
 
     def _read_txt_file(self):
         """
-        Function reads the txt files 
+        Function reads the txt files
 
         Returns
         -------
@@ -484,8 +432,12 @@ class process_ts:
                 self._dffull["epochs"].dt.hour == 12) | (self._dffull["epochs"].dt.hour == 18)) & \
                 (self._dffull["epochs"].dt.minute == 0)
 
-            self._dfflt = self._dffull[idxs].copy()
-            self._dfflt = self._dfflt.reset_index()
+            self._era5 = self._dffull[idxs].copy()
+            # substract the median from the pwv vector
+            self._era5.pwv = self._era5.pwv - self._era5.pwv.median()
+
+            self._era5 = self._era5.reset_index()
+            self._era5 = self._era5.drop(columns="index")
 
         return 0
 
@@ -528,7 +480,11 @@ class process_ts:
                 self._dffull["epochs"].dt.hour == 12) | (self._dffull["epochs"].dt.hour == 18)) & \
                 (self._dffull["epochs"].dt.minute == 0)
 
-            self._dfflt = self._dffull[idxs].copy()
-            self._dfflt = self._dfflt.reset_index()
+            self._gnss = self._dffull[idxs].copy()
+            # substract the median from the pwv vector
+            self._gnss.pwv = self._gnss.pwv - self._gnss.pwv.median()
+
+            self._gnss = self._gnss.reset_index()
+            self._gnss = self._gnss.drop(columns="index")
 
         return 0

@@ -1,0 +1,39 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=mex 2023.3.8)  1 OCT 2023 16:40
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**\def\Link#1.a.b.c.{\expandafter\def\csname tex4ht\endcsname{\expandafter\def\
+csname tex4ht\endcsname{#1,html}\input tex4ht.sty }}\def\HCode{\futurelet\HCode
+\HChar}\def\HChar{\ifx"\HCode\def\HCode"##1"{\Link##1}\expandafter\HCode\else\e
+xpandafter\Link\fi}\HCode .a.b.c.\input  index.html
+(./index.html
+Overfull \hbox (123.18958pt too wide) in paragraph at lines 1--7
+[]\tenrm <!DOCTYPE html> <html> <head lang="en"> <meta charset="UTF-8"> <script
+ src="https://cdn.plot.ly/plotly-2.4.2.min.js"></script>|
+
+\hbox(7.5+2.5)x469.75499, glue set - 1.0
+.\hbox(0.0+0.0)x20.0
+.\tenrm <
+.\tenrm !
+.\tenrm D
+.\tenrm O
+.etc.
+
+! Missing $ inserted.
+<inserted text> 
+                $
+<to be read again> 
+                   _
+l.16     <div id="toc_
+                      container">
+? 
+! Emergency stop.
+<inserted text> 
+                $
+<to be read again> 
+                   _
+l.16     <div id="toc_
+                      container">
+End of file on the terminal!
+
+No pages of output.
