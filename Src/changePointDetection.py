@@ -12,10 +12,11 @@ from statsmodels.graphics.tsaplots import plot_acf
 import statsmodels.api as sm
 import pandas as pd
 import numpy as np
+import statistics as st
 
 import math
 
-from Src.medianYear import medianYear
+# from Src.medianYear import medianYear
 
 
 class changePointDetection:
@@ -170,7 +171,6 @@ class changePointDetection:
             fig.update_yaxes(title_text="<b>PWV [mm]</b>", secondary_y=False)
             fig.update_yaxes(title_text="<b>TK Statistics [-]</b>", secondary_y=True)
 
-            fig.show()
             self._fig = fig
 
         else:
@@ -208,6 +208,8 @@ class changePointDetection:
 
     def _confidenceInterval(self):
         """
+
+        MELTODO: NEED TO BE CHECKED!!!!!!!!
         Functions returns the indexes of confidence interval of detected change point
 
         Returns
@@ -263,13 +265,13 @@ class changePointDetection:
         N = len(self._data)
         tNorm = self._maxTk / self._sigStar
 
-        an = math.sqrt(2 * math.log(math.log(N)))
-        bn = 2 * math.log(math.log(N)) + 0.5 * \
+        an = math.sqrt(2.0 * math.log(math.log(N)))
+        bn = 2.0 * math.log(math.log(N)) + 0.5 * \
             math.log(math.log(math.log(N))) - 0.5 * math.log(math.pi)
 
         y = an * tNorm - bn
 
-        self._pVal = 1 - math.exp(-2 * math.exp(-y))
+        self._pVal = 1.0 - math.exp(-2.0 * math.exp(-y))
 
     def _sigmaStar(self):
         """
@@ -374,26 +376,30 @@ class changePointDetection:
         N = len(self._data)
 
         # actualMean = self._data.mean()
-        k = 1
+        k = 2
         self._TK = pd.DataFrame()
         TK = []
         SK = []
         data = self._data.vals.to_numpy()
         while (k <= N-1):
 
-            sum_k = np.sum(data[:k])
-            x_k = sum_k/k
+            # sum_k = np.sum(data[:k])
+            # x_k = sum_k/k
+            x_k = data[:k].mean()
 
-            sum_n = np.sum(data[k:N])
-            x_n = sum_n/(N-k)
+            # sum_n = np.sum(data[k:N])
+            # x_n = sum_n/(N-k)
+            x_n = data[k:N].mean()
 
             sumk = np.sum((data[:k] - x_k) ** 2)
             sumn = np.sum((data[k:N] - x_n) ** 2)
-            sk = math.sqrt((sumk + sumn) / (N - 2))
+            # sumk = k * math.pow(st.stdev(data[:k]), 2)
+            # sumn = (N - k) * math.pow(st.stdev(data[k:N]), 2)
 
+            sk = math.sqrt((sumk + sumn) / (N - 2))
             SK.append(sk)
 
-            actualTK = math.sqrt((N - k) * k / N) * abs(x_k - x_n) * (1/sk)
+            actualTK = math.sqrt((N - k) * k / N) * abs(x_k - x_n) / sk
 
             TK.append(actualTK)
 

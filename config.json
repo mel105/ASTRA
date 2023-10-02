@@ -1,6 +1,6 @@
 {
     "set_inp":{
-            "inp_file_name":["albh", "aspa", "ispa"],
+            "inp_file_name":["albh"],
             "inp_local_path":"/home/mel/Dokumenty/M/ASTRA/Data"
 	},
 	"set_out":{
