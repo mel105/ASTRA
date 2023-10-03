@@ -12,8 +12,6 @@ from Src.config import config
 from Src.process_ts import process_ts
 from jinja2 import Environment, FileSystemLoader
 from Src.support import check_folder
-from xhtml2pdf import pisa
-import pdfkit
 
 
 def get_version_table():
@@ -27,14 +25,15 @@ def get_version_table():
 
     #
     edit_data = {
-        "Version": ["0.0.1", "0.0.2", "0.0.3", "0.0.4"],
-        "Author": ["MEL", "MEL", "MEL", "MEL"],
-        "DATE": ["2023-09-18", "2023-09-26", "2023-09-28", "2023-09-30"],
+        "Version": ["0.0.1", "0.0.2", "0.0.3", "0.0.4", "0.0.5"],
+        "Author": ["MEL", "MEL", "MEL", "MEL", "MEL"],
+        "DATE": ["2023-09-18", "2023-09-26", "2023-09-28", "2023-09-30", "2023-10-03"],
         "Main contribution": [
             "Basic variant of html report that includes the PWV Time Series homogenization results",
             "Basic version of change point algorithm is implemented",
             "The class that convers the median year time series calculation is implemented",
             "Multiple change point detection processing",
+            "Some codes cleaning. Script for results plotting."
         ],
     }
 
@@ -61,6 +60,7 @@ def second_level_report(tsObj, input_file_name, input_file_add):
     data_level2 = {
         "fig": tsObj.get_orig_fig().to_html(),
         "fig_chp":  tsObj.get_chp_fig().to_html(),
+        "fig_full": tsObj.get_chp_full().to_html(),
         "fig_adj":  tsObj.get_adj_fig().to_html(),
         "fig_out":  tsObj.get_out_fig().to_html(),
         "fig_repl": tsObj.get_homo_fig().to_html(),
@@ -119,7 +119,9 @@ def report():
 
         idx += 1
     #
-    info_summary = {"Files": list_of_file_names, "Link": list_of_links}
+    info_summary = {"File Name": list_of_file_names, "Link": list_of_links,
+                    "No. of detected change point(s)": len(tsObj.get_chp())}
+
     info_table = pd.DataFrame(info_summary)
 
     #         HTML REPORT

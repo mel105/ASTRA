@@ -10,6 +10,83 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 
+def detections(data, listOfChp):
+
+    fo = go.Figure()
+    fo.add_trace(go.Scatter(x=data.epochs, y=data.vals, mode="lines"))
+
+    fo.update_layout(
+        title_text="<b>Presentation of all detected change point</b>",
+        autosize=False,
+        width=800,
+        height=400,
+        yaxis=dict(
+            autorange=True,
+            showgrid=True,
+            zeroline=True,
+            dtick=5,
+            gridcolor="rgb(255, 255, 255)",
+            gridwidth=1,
+            zerolinecolor="rgb(255, 255, 255)",
+            zerolinewidth=2,
+        ),
+        margin=dict(l=40, r=30, b=80, t=100,),
+        paper_bgcolor="rgb(243, 243, 243)",
+        plot_bgcolor="rgb(243, 243, 243)",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
+
+    mbeg = 0
+    counter = 0
+    for idx in listOfChp:
+
+        # plot means
+        if counter == len(listOfChp):
+            mend = -1
+        else:
+            mend = idx
+
+        fo.add_shape(type='line',
+                     x0=data.epochs.iloc[mbeg],
+                     y0=data.vals[mbeg:mend].mean(),
+                     x1=data.epochs.iloc[mend],
+                     y1=data.vals[mbeg:mend].mean(),
+                     line=dict(color='Red',),
+                     xref='x',
+                     yref='y'
+                     )
+
+        # plot change point index
+        fo.add_vrect(x0=data.epochs.iloc[idx],
+                     x1=data.epochs.iloc[idx],
+                     line=dict(
+            color="green",
+            dash="dash"
+        ),
+        )
+
+        mbeg = mend
+        counter += 1
+
+    fo.add_shape(type='line',
+                 x0=data.epochs.iloc[listOfChp[-1]],
+                 y0=data.vals[listOfChp[-1]:].mean(),
+                 x1=data.epochs.iloc[-1],
+                 y1=data.vals[listOfChp[-1]:].mean(),
+                 line=dict(color='Red',),
+                 xref='x',
+                 yref='y'
+                 )
+
+    return fo
+
+
 def intakes(mergedSeries):
 
     fig = make_subplots(rows=2, cols=1)
@@ -27,7 +104,7 @@ def intakes(mergedSeries):
             autorange=True,
             showgrid=True,
             zeroline=True,
-            dtick=250,
+            dtick=5,
             gridcolor="rgb(255, 255, 255)",
             gridwidth=1,
             zerolinecolor="rgb(255, 255, 255)",
@@ -65,7 +142,7 @@ def linePlot(data_X, data_Y, mtitle=" ", xlabel="TIME [#6 hours]", ylabel="PWV [
             autorange=True,
             showgrid=True,
             zeroline=True,
-            dtick=250,
+            dtick=5,
             gridcolor="rgb(255, 255, 255)",
             gridwidth=1,
             zerolinecolor="rgb(255, 255, 255)",

@@ -8,16 +8,12 @@ Created on Mon Sep 18 19:44:07 2023
 
 # import os
 import sys
-import statistics as stat
-
-
 import Src.pwvPlot as pt
 import Src.outliersEstimation as oe
 # import os
 from pathlib import Path
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 import plotly.io as pio
 from Src.changePointDetection import changePointDetection
 # import Src.changePointDetection as chp
@@ -85,6 +81,9 @@ class process_ts:
     def get_chp_fig(self):
         return self._fig_chp
 
+    def get_chp_full(self):
+        return self._fig_full
+
     def get_adj_fig(self):
         return self._fig_adj
 
@@ -93,6 +92,9 @@ class process_ts:
 
     def get_homo_fig(self):
         return self._fig_repl
+
+    def get_chp(self):
+        return self._listOfEpo
 
     # protected functions
 
@@ -117,11 +119,12 @@ class process_ts:
 
         # plot
         self._fig_chp = chp.get_chp_plot()
-        self._fig_chp.show()
+        # self._fig_chp.show()
 
         # MULTICHANGE POINT DETECTION
         # Spliting the original series into sub-series in case that the chp was detected
-        # listOfChp = []
+        self._listOfEpo = []
+        listOfChp = []
         subseries = []
 
         if chp.get_chp_result():
@@ -130,6 +133,10 @@ class process_ts:
             self._homo[_index:] = self._homo[_index:]+_shift
 
             subseries = self._update(self._data, _index, subseries)
+
+            # fill list of change points
+            listOfChp.append(_index)
+            self._listOfEpo.append(_point)
 
             # loop over the sub-series
             tst = True
@@ -143,11 +150,23 @@ class process_ts:
 
                     # Removing the sub-series in case that was already processed
                     subseries.pop(idx)
-                    _, _idx, _sft = chp.get_chp()
+                    _pt, _idx, _sft = chp.get_chp()
+
+                    # plot
+                    # fig_chp = chp.get_chp_plot()
+                    # fig_chp.show()
+
+                    # find _pt in original series and get index
+                    b = self._data[self._data.epochs == _pt]
+                    orig_idx = b.index[0]
+
+                    # fill list of change point
+                    listOfChp.append(orig_idx)
+                    self._listOfEpo.append(_pt)
 
                     # homogenization. MELTODO wrong code. Idx of change point is calculated only in subseries
                     # time interval. This, we need to parse this index to the original series.
-                    self._homo[_idx:] = self._homo[_idx:]+_sft
+                    self._homo[orig_idx:] = self._homo[orig_idx:]+_sft
 
                     # update
                     subseries = self._update(actual_data, _idx, subseries)
@@ -159,6 +178,11 @@ class process_ts:
                     tst = False
                 else:
                     print(" ")
+
+            # plot the figure of detected change point(s)
+            fo_full = pt.detections(self._data, listOfChp)
+            # fo_full.show()
+            self._fig_full = fo_full
         else:
             print("No change point was detected!")
 

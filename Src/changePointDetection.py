@@ -236,8 +236,12 @@ class changePointDetection:
 
         mVal = (critAlpha * self._SK[self._idxMaxTk] ** 2) / (self._shift ** 2)
 
-        self._uppConfIntervalIdx = self._idxMaxTk + math.floor(mVal)
-        self._lowConfIntervalIdx = self._idxMaxTk - math.floor(mVal)
+        if np.isnan(mVal):
+            self._uppConfIntervalIdx = self._idxMaxTk
+            self._lowConfIntervalIdx = self._idxMaxTk
+        else:
+            self._uppConfIntervalIdx = self._idxMaxTk + math.floor(mVal)
+            self._lowConfIntervalIdx = self._idxMaxTk - math.floor(mVal)
 
     def _hypoTest(self):
         """
