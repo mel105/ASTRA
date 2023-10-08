@@ -12,7 +12,6 @@ from statsmodels.graphics.tsaplots import plot_acf
 import statsmodels.api as sm
 import pandas as pd
 import numpy as np
-import statistics as st
 
 import math
 
@@ -123,7 +122,7 @@ class changePointDetection:
                     autorange=True,
                     showgrid=True,
                     zeroline=True,
-                    dtick=250,
+                    dtick=5,
                     gridcolor="rgb(255, 255, 255)",
                     gridwidth=1,
                     zerolinecolor="rgb(255, 255, 255)",
@@ -221,15 +220,27 @@ class changePointDetection:
         critAlpha = 999
         prob = 0.95  # MELTODO: parameter should be given from configure file
 
+        # if we want 95% cinfidence interval than we have to select 0.975 quantile
         if (prob == 0.9):
-            critAlpha = 4.696
+            quantile = 0.95
         elif (prob == 0.95):
-            critAlpha = 7.687
+            quantile = 0.975
         elif (prob == 0.975):
-            critAlpha = 11.033
+            quantile = 0.9875
         elif (prob == 0.99):
-            critAlpha = 15.868
+            quantile = 0.995
         elif (prob == 0.995):
+            quantile = 0.9975
+
+        if (quantile == 0.9):
+            critAlpha = 4.696
+        elif (quantile == 0.95):
+            critAlpha = 7.687
+        elif (quantile == 0.975):
+            critAlpha = 11.033
+        elif (quantile == 0.99):
+            critAlpha = 15.868
+        elif (quantile == 0.995):
             critAlpha = 19.767
         else:
             critAlpha = 4
@@ -387,25 +398,18 @@ class changePointDetection:
         data = self._data.vals.to_numpy()
         while (k <= N-1):
 
-            # sum_k = np.sum(data[:k])
-            # x_k = sum_k/k
             x_k = data[:k].mean()
-
-            # sum_n = np.sum(data[k:N])
-            # x_n = sum_n/(N-k)
             x_n = data[k:N].mean()
 
             sumk = np.sum((data[:k] - x_k) ** 2)
             sumn = np.sum((data[k:N] - x_n) ** 2)
-            # sumk = k * math.pow(st.stdev(data[:k]), 2)
-            # sumn = (N - k) * math.pow(st.stdev(data[k:N]), 2)
 
             sk = math.sqrt((sumk + sumn) / (N - 2))
             SK.append(sk)
 
-            actualTK = math.sqrt((N - k) * k / N) * abs(x_k - x_n) / sk
+            tk = math.sqrt((N - k) * k / N) * abs(x_k - x_n) / sk
 
-            TK.append(actualTK)
+            TK.append(tk)
 
             k += 1
 
