@@ -91,7 +91,7 @@ class changePointDetection:
             DESCRIPTION.
 
         """
-        return self._tdata.epochs.iloc[self._idxMaxTk], self._idxMaxTk, self._shift
+        return self._tdata.DATE.iloc[self._idxMaxTk], self._idxMaxTk, self._shift
 
     def get_chp_plot(self):
         return self._fig
@@ -106,23 +106,24 @@ class changePointDetection:
         if self._result_of_stationarity:
             fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-            #
-            fig.add_trace(go.Scatter(x=self._tdata.epochs, y=self._data.vals,
-                          name="PWV [mm]"), secondary_y=False)
-            fig.add_trace(go.Scatter(x=self._tdata.epochs, y=self._TK, fill="tozeroy",
+            # NOTE Analaysed series can be potentialy cleaned of seasonal signal.
+            fig.add_trace(go.Scatter(x=self._tdata.DATE, y=self._data.vals,
+                          name="Analysed series"), secondary_y=False)
+            fig.add_trace(go.Scatter(x=self._tdata.DATE, y=self._TK, fill="tozeroy",
                           name=" TK [-]"), secondary_y=True)
 
             fig.update_layout(
                 title_text="<b>Result of change point detection</b>",
+                # yaxis=dict(range=[min(self._data.vals), 1.5*max(self._data.vals)+max(self._data.vals)]),
                 yaxis2=dict(range=[min(self._TK), 1.5*max(self._TK)+max(self._TK)]),
                 autosize=False,
                 width=800,
                 height=400,
                 yaxis=dict(
-                    autorange=True,
+                    # autorange=True,
                     showgrid=True,
                     zeroline=True,
-                    dtick=5,
+                    # dtick=5,
                     gridcolor="rgb(255, 255, 255)",
                     gridwidth=1,
                     zerolinecolor="rgb(255, 255, 255)",
@@ -140,16 +141,16 @@ class changePointDetection:
                 )
             )
 
-            fig.add_vrect(x0=self._tdata.epochs.iloc[self._idxMaxTk],
-                          x1=self._tdata.epochs.iloc[self._idxMaxTk],
+            fig.add_vrect(x0=self._tdata.DATE.iloc[self._idxMaxTk],
+                          x1=self._tdata.DATE.iloc[self._idxMaxTk],
                           line=dict(
                               color="green",
                               dash="dash"
             ),
             )
 
-            fig.add_vrect(x0=self._tdata.epochs.iloc[self._lowConfIntervalIdx],
-                          x1=self._tdata.epochs.iloc[self._uppConfIntervalIdx],
+            fig.add_vrect(x0=self._tdata.DATE.iloc[self._lowConfIntervalIdx],
+                          x1=self._tdata.DATE.iloc[self._uppConfIntervalIdx],
                           annotation_text="95% Interval Confidence", annotation_position="top left",
                           fillcolor="green", opacity=0.2, line_width=0
                           )
@@ -164,18 +165,26 @@ class changePointDetection:
                           )
 
             # Set x-axis title
-            fig.update_xaxes(title_text="TIME [#6 Hours]")
+            fig.update_xaxes(title_text="DATE")
 
             # Set y-axes titles
-            fig.update_yaxes(title_text="<b>PWV [mm]</b>", secondary_y=False)
+            fig.update_yaxes(title_text="<b>Analysed series</b>",
+                             range=[min(self._data.vals), 1.5*max(self._data.vals)],
+                             row=1,
+                             col=1,
+                             secondary_y=False)
+
             fig.update_yaxes(title_text="<b>TK Statistics [-]</b>", secondary_y=True)
 
             self._fig = fig
+            # fig.show()
 
         else:
             print("No plot will be created!\n\n")
 
-            return go.Figure()
+            self._fig = go.Figure()
+
+        return 0
 
     def _printResults(self):
         """
@@ -188,19 +197,19 @@ class changePointDetection:
         """
 
         print("\n======================= CHANGE POINT DETECTION ========================== \n")
-        bg = self._tdata.epochs.iloc[0]
-        en = self._tdata.epochs.iloc[-1]
+        bg = self._tdata.DATE.iloc[0]
+        en = self._tdata.DATE.iloc[-1]
         print("Time series interval: From {0} to {1}".format(bg, en))
         print("Size: ", len(self._data))
         print("Detected change point: ", self._result_of_stationarity)
 
         if self._result_of_stationarity:
             print("\n   Change point detected at: {0} [index {1}]".format(
-                self._tdata.epochs.iloc[self._idxMaxTk], self._idxMaxTk))
+                self._tdata.DATE.iloc[self._idxMaxTk], self._idxMaxTk))
             print(
                 "   95% - Confidence interval: {0} - {1}".format(
-                    self._tdata.epochs.iloc[self._lowConfIntervalIdx],
-                    self._tdata.epochs.iloc[self._uppConfIntervalIdx]))
+                    self._tdata.DATE.iloc[self._lowConfIntervalIdx],
+                    self._tdata.DATE.iloc[self._uppConfIntervalIdx]))
             print("   Shift: ", self._shift)
 
         return 0
@@ -260,7 +269,10 @@ class changePointDetection:
         non-stationary and False, maxTK < critcal value, meaning that the time series is stationary.
         """
 
+        print(self._maxTk)
+        print(self._criticalValue)
         if self._maxTk > self._criticalValue:
+
             self._result_of_stationarity = True
         else:
             self._result_of_stationarity = False
@@ -313,7 +325,7 @@ class changePointDetection:
         norm_acorr = sm.tsa.acf(dataNew, nlags=L)
 
         # self._acf = acorr[1]
-        f0est = norm_acorr[0]
+        f0est = norm_acorr[1]
 
         for i in range(L):
             k = i + 1
@@ -323,9 +335,17 @@ class changePointDetection:
         self._sigStar = math.sqrt(abs(f0est))
 
         # update critical value
-        if norm_acorr[0] > 0.4:
-            self._criticalValue = self._criticalValue * self._sigStar * self._rho
+        if norm_acorr[1] > 0.5:
+            print("norm accor")
+            print(norm_acorr[1])
+            print(self._criticalValue)
+            print(self._sigStar)
+            print(self._rho)
 
+            # self._criticalValue = self._criticalValue * self._sigStar * self._rho
+            self._criticalValue = self._criticalValue * self._rho
+
+            print("\n\n\n")
         return 0
 
     def _shiftEstimation(self):
@@ -434,10 +454,11 @@ class changePointDetection:
 
         """
 
+        # print("################## {0}".format(len(self._data.vals)))
         acorr = sm.tsa.acf(self._data.vals, nlags=3)
 
         # if plot is required, then
-        plot_acf(self._data.vals)
+        # plot_acf(self._data.vals)
 
         self._acf = acorr[1]
         self._rho = math.sqrt((1.0 + self._acf)/(1.0 - self._acf))
@@ -460,25 +481,25 @@ class changePointDetection:
         # # NEED TO create and use medain series even on ERA-GNSS difference series, because of
         # # bad distributon or periodicity respectively
         # toMedian = pd.DataFrame()
-        # toMedian["epochs"] = self._data[["epochs"]].copy()
+        # toMedian["DATE"] = self._data[["DATE"]].copy()
         # toMedian["values"] = self._data[["vals"]].copy()
         # my = medianYear(self._conf, toMedian)
         # med = my.get_median_year()
         # # my.get_plot()
 
-        # med = med.set_index("epochs")
-        # self._data = self._data.set_index("epochs")
+        # med = med.set_index("DATE")
+        # self._data = self._data.set_index("DATE")
 
         # mergedSeries = pd.merge(self._data, med, how='inner', left_index=True, right_index=True)
         # mergedSeries = mergedSeries.reset_index()
         # self._data = self._data.reset_index()
 
         # a = pd.DataFrame()
-        # a = mergedSeries[["epochs", "vals", "values"]].copy()
+        # a = mergedSeries[["DATE", "vals", "values"]].copy()
         # a["diff"] = a.vals - a.values[:, 2]
 
         # # replacement of original differences by correction of median year
         # self._data.vals = a[["diff"]].copy()
 
         self._tdata = pd.DataFrame()
-        self._tdata["epochs"] = self._data[["epochs"]].copy()
+        self._tdata["DATE"] = self._data[["DATE"]].copy()

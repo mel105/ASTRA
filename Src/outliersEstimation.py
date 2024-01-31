@@ -39,16 +39,16 @@ def outliersPlot(data_X, data_Y, lowidx, uppidx):
     fig_out.add_trace(go.Scatter(x=data_X[uppidx], y=data_Y[uppidx], mode="markers"))
     fig_out.update_layout(
         title="Presentation the Outliers in Analysed Time Series",
-        xaxis_title="TIME [#6 hours]",
-        yaxis_title="PWV [mm]",
+        xaxis_title="DATE",
+        yaxis_title="Analysed time series",
         autosize=False,
         width=800,
         height=400,
         yaxis=dict(
-            autorange=True,
+            # autorange=True,
             showgrid=True,
             zeroline=True,
-            dtick=250,
+            # dtick=250,
             gridcolor="rgb(255, 255, 255)",
             gridwidth=1,
             zerolinecolor="rgb(255, 255, 255)",

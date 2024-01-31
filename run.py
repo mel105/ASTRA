@@ -25,15 +25,16 @@ def get_version_table():
 
     #
     edit_data = {
-        "Version": ["0.0.1", "0.0.2", "0.0.3", "0.0.4", "0.0.5"],
-        "Author": ["MEL", "MEL", "MEL", "MEL", "MEL"],
-        "DATE": ["2023-09-18", "2023-09-26", "2023-09-28", "2023-09-30", "2023-10-03"],
+        "Version": ["0.0.1", "0.0.2", "0.0.3", "0.0.4", "0.0.5", "0.0.6"],
+        "Author": ["MEL", "MEL", "MEL", "MEL", "MEL", "MEL"],
+        "DATE": ["2023-09-18", "2023-09-26", "2023-09-28", "2023-09-30", "2023-10-03", "2024-01-30"],
         "Main contribution": [
             "Basic variant of html report that includes the PWV Time Series homogenization results",
             "Basic version of change point algorithm is implemented",
             "The class that convers the median year time series calculation is implemented",
             "Multiple change point detection processing",
-            "Some codes cleaning. Script for results plotting."
+            "Some codes cleaning. Script for results plotting.",
+            "Code generalization to different type of time series."
         ],
     }
 
@@ -97,7 +98,8 @@ def report():
 
     while idx < len(configObj.get_inp_file_name()):
 
-        print("====== Processed Station No. {0}: {1} ".format(idx+1, configObj.get_inp_file_name()[idx]))
+        print("\n\n\n====== Processed Station No. {0}: {1} ".format(
+            idx+1, configObj.get_inp_file_name()[idx]))
 
         # Process the data
         tsObj = process_ts(configObj, idx)

@@ -42,18 +42,18 @@ class medianYear:
         """
 
         fo = go.Figure()
-        fo.add_trace(go.Scatter(x=self._df.epochs, y=self._df.values[:, 1], mode="lines"))
-        fo.add_trace(go.Scatter(x=self._med.epochs, y=self._med.values[:, 1], mode="lines"))
+        fo.add_trace(go.Scatter(x=self._df.DATE, y=self._df.values[:, 1], mode="lines"))
+        fo.add_trace(go.Scatter(x=self._med.DATE, y=self._med.values[:, 1], mode="lines"))
         fo.update_layout(
             title="Applied Median year time series on Original time series",
             autosize=False,
             width=800,
             height=400,
             yaxis=dict(
-                autorange=True,
+                # autorange=True,
                 showgrid=True,
                 zeroline=True,
-                dtick=250,
+                # dtick=250,
                 gridcolor="rgb(255, 255, 255)",
                 gridwidth=1,
                 zerolinecolor="rgb(255, 255, 255)",
@@ -64,7 +64,6 @@ class medianYear:
             plot_bgcolor="rgb(243, 243, 243)",
             showlegend=False,
         )
-        fo.show()
 
         return fo
 
@@ -94,18 +93,18 @@ class medianYear:
         """
 
         dis = pd.DataFrame()
-        dis["epochs"] = pd.date_range(start="1/1/"+str(self._beg),
-                                      end="1/1/"+str(self._end+1), freq="6h")
-        dis["YM"] = dis.epochs.dt.strftime("%m-%d-%H")
+        dis["DATE"] = pd.date_range(start="1/1/"+str(self._beg),
+                                    end="1/1/"+str(self._end+1), freq="6h")
+        dis["YM"] = dis.DATE.dt.strftime("%m-%d-%H")
 
         med = pd.merge(dis, self._dfmedian, on="YM")
-        med = med.sort_values("epochs")
+        med = med.sort_values("DATE")
         med = med.reset_index()
         med = med.drop(columns=["YM", "index"])
 
         self._med = pd.DataFrame()
         self._med = med.copy()
-        # self._med["epochs"] = med.epochs
+        # self._med["DATE"] = med.DATE
         # self._med["vals"] = med.values
 
         return 0
@@ -124,7 +123,7 @@ class medianYear:
         # median year
         #  algorithm based on "contingency table"
         self._dfext = self._df.copy()
-        self._dfext["YM"] = [i.strftime("%m-%d-%H") for i in list(self._df.epochs)]
+        self._dfext["YM"] = [i.strftime("%m-%d-%H") for i in list(self._df.DATE)]
         # self._dfext = self._dfext.reset_index()
 
         self._dfmedian = self._dfext.groupby(["YM"]).median(numeric_only=True)

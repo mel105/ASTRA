@@ -95,6 +95,18 @@ class config:
         return self._END
 
     def get_preprocess(self):
+        """
+        The function returns the 0, 1 or 2 decision. If:
+            0 - then the analysed series is investigated withut the seasonal signal removing,
+            1 - then from the analysed series, the seasonal signal is removed using the median year and
+            2 - then from the analysed series, the seasonal signal is removed using the reference series.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        """
         return self._preprocess
 
     # protected functions
@@ -120,6 +132,6 @@ class config:
         self._out_local_path = cf["set_out"]["out_local_path"]
 
         # General setting
-        self._preprocess = cf["set_general"]["onlyPreprocess"]
+        self._preprocess = cf["set_general"]["preprocess"]
         self._BEG = cf["set_general"]["BEG"]
         self._END = cf["set_general"]["END"]

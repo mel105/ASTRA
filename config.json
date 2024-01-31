@@ -1,6 +1,8 @@
 {
     "set_inp":{
-            "inp_file_name":["albh"],
+            "inp_file_name":[
+"UfG"
+],
             "inp_local_path":"/home/mel/Dokumenty/M/ASTRA/Data"
 	},
 	"set_out":{
@@ -8,8 +10,8 @@
         	"out_local_path":"/home/mel/Dokumenty/M/ASTRA/Res"
 	},
     "set_general":{
-        "onlyPreprocess": 0,
-        "BEG": 2000,
-        "END": 2022
+        "preprocess": 1,
+        "BEG": 2018,
+        "END": 2024
         }
 }
