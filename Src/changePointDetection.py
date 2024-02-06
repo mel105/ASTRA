@@ -8,7 +8,7 @@ Created on Sun Sep 24 13:22:00 2023
 
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from statsmodels.graphics.tsaplots import plot_acf
+# from statsmodels.graphics.tsaplots import plot_acf
 import statsmodels.api as sm
 import pandas as pd
 import numpy as np
@@ -227,29 +227,39 @@ class changePointDetection:
         """
 
         critAlpha = 999
-        prob = 0.95  # MELTODO: parameter should be given from configure file
+        prob = self._conf.get_cnd_ci_prob()  # 0.95
 
         # if we want 95% cinfidence interval than we have to select 0.975 quantile
         if (prob == 0.9):
+
             quantile = 0.95
         elif (prob == 0.95):
+
             quantile = 0.975
         elif (prob == 0.975):
+
             quantile = 0.9875
         elif (prob == 0.99):
+
             quantile = 0.995
         elif (prob == 0.995):
+
             quantile = 0.9975
 
         if (quantile == 0.9):
+
             critAlpha = 4.696
         elif (quantile == 0.95):
+
             critAlpha = 7.687
         elif (quantile == 0.975):
+
             critAlpha = 11.033
         elif (quantile == 0.99):
+
             critAlpha = 15.868
         elif (quantile == 0.995):
+
             critAlpha = 19.767
         else:
             critAlpha = 4
@@ -269,8 +279,6 @@ class changePointDetection:
         non-stationary and False, maxTK < critcal value, meaning that the time series is stationary.
         """
 
-        print(self._maxTk)
-        print(self._criticalValue)
         if self._maxTk > self._criticalValue:
 
             self._result_of_stationarity = True
@@ -335,12 +343,7 @@ class changePointDetection:
         self._sigStar = math.sqrt(abs(f0est))
 
         # update critical value
-        if norm_acorr[1] > 0.5:
-            print("norm accor")
-            print(norm_acorr[1])
-            print(self._criticalValue)
-            print(self._sigStar)
-            print(self._rho)
+        if norm_acorr[1] > self._conf.get_cnd_norm_acorr():
 
             # self._criticalValue = self._criticalValue * self._sigStar * self._rho
             self._criticalValue = self._criticalValue * self._rho
@@ -386,7 +389,7 @@ class changePointDetection:
         Function returns the critical value
         """
 
-        prob = 0.95  # MELTODO: add to configure
+        prob = self._conf.get_cnd_cv_prob()
         N = len(self._data)
 
         an = 1.0 / math.sqrt(2.0 * math.log(math.log(N)))

@@ -13,5 +13,12 @@
         "preprocess": 1,
         "BEG": 2018,
         "END": 2024
-        }
+        },
+    "set_conditions":{
+        "cnd_actual_data": 100,
+        "cnd_orig_idx": 3,
+        "cnd_ci_prob": 0.95,
+        "cnd_norm_acorr": 0.35,
+        "cnd_cv": 0.95
+    }
 }

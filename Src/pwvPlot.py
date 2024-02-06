@@ -95,10 +95,11 @@ def intakes(mergedSeries):
 
     fig = make_subplots(rows=2, cols=1)
     fig.add_trace(go.Scatter(x=mergedSeries.DATE,
-                  y=mergedSeries["Analysed"], mode="lines"), row=1, col=1)
+                  y=mergedSeries["Analysed"], mode="lines", name="Analysed time series"), row=1, col=1)
     fig.add_trace(go.Scatter(x=mergedSeries.DATE,
-                  y=mergedSeries["Reference"], mode="lines"), row=1, col=1)
-    fig.add_trace(go.Scatter(x=mergedSeries.DATE, y=mergedSeries.vals, mode="lines"), row=2, col=1)
+                  y=mergedSeries["Reference"], mode="lines", name="Reference time series"), row=1, col=1)
+    fig.add_trace(go.Scatter(x=mergedSeries.DATE, y=mergedSeries.vals,
+                  mode="lines", name="Difference"), row=2, col=1)
     fig.update_layout(
         title="Analysed and Reference time series presentation",
         autosize=False,
@@ -117,7 +118,14 @@ def intakes(mergedSeries):
         margin=dict(l=40, r=30, b=80, t=100,),
         paper_bgcolor="rgb(243, 243, 243)",
         plot_bgcolor="rgb(243, 243, 243)",
-        showlegend=False,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+
     )
     fig.update_xaxes(title_text=" ", row=1, col=1)
     fig.update_xaxes(title_text="Date", row=2, col=1)

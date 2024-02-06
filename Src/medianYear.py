@@ -7,6 +7,7 @@ Created on Thu Sep 28 18:24:26 2023
 """
 import pandas as pd
 import plotly.graph_objects as go
+from datetime import datetime
 
 
 class medianYear:
@@ -122,9 +123,15 @@ class medianYear:
 
         # median year
         #  algorithm based on "contingency table"
+
         self._dfext = self._df.copy()
-        self._dfext["YM"] = [i.strftime("%m-%d-%H") for i in list(self._df.DATE)]
-        # self._dfext = self._dfext.reset_index()
+
+        # check if _df.DATE[i] is str. If it is, then convert to datetime
+        if isinstance(self._df.DATE[0], str):
+            self._dfext["YM"] = [datetime.strptime(
+                i, "%Y-%m-%d %H:%M:%S").strftime("%m-%d-%H") for i in list(self._df.DATE)]
+        else:
+            self._dfext["YM"] = [i.strftime("%m-%d-%H") for i in list(self._df.DATE)]
 
         self._dfmedian = self._dfext.groupby(["YM"]).median(numeric_only=True)
         self._dfmedian = self._dfmedian.reset_index()

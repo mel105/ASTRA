@@ -12,14 +12,13 @@ import Src.outliersEstimation as oe
 import Src.support as sp
 
 # import os
-from pathlib import Path
-import numpy as np
+# from datetime import datetime
 import pandas as pd
 import math
 import plotly.io as pio
 import plotly.graph_objects as go
 import os
-from os import walk
+
 from Src.changePointDetection import changePointDetection
 from Src.medianYear import medianYear
 # import Src.changePointDetection as chp
@@ -65,6 +64,10 @@ class process_ts:
         self._beg_reset = conf.get_beg()
         self._end_reset = conf.get_end()
         self._preprocess = conf.get_preprocess()
+
+        # conditions
+        self._cnd_actual_data = conf.get_cnd_actual_data()
+        self._cnd_orig_idx = conf.get_cnd_orig_idx()
 
         # because i need the config to change point method, then
         self._conf = conf
@@ -188,7 +191,7 @@ class process_ts:
 
                 actual_data = pd.DataFrame(subseries[idx])
 
-                if len(actual_data) == 0:
+                if len(actual_data) < self._cnd_actual_data:
                     break
                 else:
 
@@ -211,24 +214,49 @@ class process_ts:
                         b = self._data[self._data.DATE == _pt]
                         orig_idx = b.index[0]
 
-                        # fill list of change point
-                        listOfChp.append(orig_idx)
-                        listOfShifts.append(_sft)
-                        self._listOfEpo.append(_pt)
+                        # update list of change point
+                        ignore = []
+                        for i in listOfChp:
 
-                        # homogenization. MELTODO wrong code. Idx of change point is calculated only in
-                        # subseries time interval. This, we need to parse this index to the original series.
-                        self._homo[orig_idx:] = self._homo[orig_idx:]-_sft
+                            if any([orig_idx > i-self._cnd_orig_idx and orig_idx < i+self._cnd_orig_idx]):
+
+                                ignore.append(1)
+                            else:
+
+                                ignore.append(0)
+
+                        print(orig_idx)
+                        print(ignore)
+                        print(listOfChp)
+                        cnd = 1
+
+                        if cnd in ignore:
+
+                            # ignore orig_val
+                            print()
+                        else:
+
+                            listOfChp.append(orig_idx)
+                            listOfShifts.append(_sft)
+                            self._listOfEpo.append(_pt)
+
+                            # homogenization. MELTODO wrong code. Idx of change point is calculated only in
+                            # subseries time interval. Thus, we need to parse this index to the original
+                            # series.
+                            self._homo[orig_idx:] = self._homo[orig_idx:]-_sft
 
                         # update
                         subseries = self._update(actual_data, _idx, subseries)
                         idx = 0
                     else:
+
                         subseries.pop(idx)
 
                     if len(subseries) == 0:
+
                         tst = False
                     else:
+
                         print(" ")
 
             # plot the figure of detected change point(s)
@@ -275,6 +303,59 @@ class process_ts:
         """
         return [idx for idx, s in enumerate(list) if str in s][0]
 
+    def _dataDecoding(self, source="ANL"):
+        """
+        Function returns the decoded data based on inputs. Data is reference and/or analysed.
+        """
+
+        if source == "ANL":
+            type_of_data = "Analysed"
+        else:
+            type_of_data = "Reference"
+
+        # SETTING THE FULL PATH TO THE DATA
+        # list of files in ANL folder
+
+        anl_files = os.listdir(self._inp_local_path+"/"+source+"/")
+
+        if any(self._station in s for s in anl_files):
+
+            # ok, the ANL folder contains the file with required station's ID
+            # now, find the file's position of required station
+            pos = self._findPosition(self._station, anl_files)
+
+            # full path of required file
+            anl_file = self._inp_local_path+"/"+source+"/"+anl_files[pos]
+
+            # finally find the file extension to decide, which type of decoder we will use
+            anl_file_name, anl_file_extension = os.path.splitext(anl_file)
+        else:
+            print("For required station {0} we do not have any file at {1} adress".format(
+                self._station, self._inp_local_path+"/"+source+"/"))
+
+        # ANL data reading
+        if anl_file_extension == ".txt":
+
+            # continue to decode TXT file format
+            print("Not yet implemented\n")
+        elif anl_file_extension == ".npz":
+
+            # continue to decode NPZ file format
+            print("Not yet implemented\n")
+        elif anl_file_extension == ".csv":
+
+            # continue to decode the CSV file format
+            dec = self._read_csv_file(anl_file, type_of_data)
+        elif anl_file_extension == ".xlsx":
+
+            # continue to decode the Excel file format
+            dec = self._read_xlsx_file(anl_file, type_of_data)
+        else:
+
+            print("Program is not able to open and read the required file format!")
+
+        return dec
+
     def _dataReading(self):
         """
         Function prepares the data for change point detection and its elimination. In next steps:
@@ -283,41 +364,7 @@ class process_ts:
 
         """
 
-        # SETTING THE FULL PATH TO THE DATA
-        # list of files in ANL folder
-        anl_files = os.listdir(self._inp_local_path+"/ANL/")
-        if any(self._station in s for s in anl_files):
-
-            # ok, the ANL folder contains the file with required station's ID
-            # now, find the file's position of required station
-            pos = self._findPosition(self._station, anl_files)
-
-            # full path of required file
-            anl_file = self._inp_local_path+"/ANL/"+anl_files[pos]
-
-            # finally find the file extension to decide, which type of decoder we will use
-            anl_file_name, anl_file_extension = os.path.splitext(anl_file)
-        else:
-            print("For required station {0} we do not have any file in {1} adress".format(
-                self._station, self._inp_local_path+"/ANL/"))
-
-        # ANL data reading
-        if anl_file_extension == ".txt":
-            # continue to decode TXT file format
-            print("\n")
-        elif anl_file_extension == ".npz":
-            # continue to decode NPZ file format
-            print("\n")
-        elif anl_file_extension == ".csv":
-            # continue to decode the CSV file format
-            print("\n")
-        elif anl_file_extension == ".xlsx":
-            # continue to decode the Excel file format
-            print("\n")
-
-            anl = self._read_xlsx_file(anl_file, "Analysed")
-        else:
-            print("Program is not able to open and read the required file format!")
+        anl = self._dataDecoding()
 
         # PART OF PROGRAM WHERE THE PROCESS IS SPLITED ACCORDING TO THE POSSIBILITY, HOW TO REMOVE THE
         # SEASONAL SIGNAL.
@@ -348,39 +395,16 @@ class process_ts:
         elif self._preprocess == 2:
             # in this step we assume that the signal is removed by the reference time series.
             print(" -- Seasonal signal is removed using the reference time series")
+
+            ref = self._dataDecoding("REF")
+
+            self._anl = anl.copy()
+            self._ref = ref.copy()
+
         else:
             print(" -- Required process is not defined!")
             sys.exit()
 
-        """
-        # ============================================================= analysed time series
-        self._read_npz_file()
-        # for purpose of chp detection, just create the copy of gnss df
-        self._anl = self._gnss[["DATE", "pwv"]].copy()
-        # for purpose of data merging
-        self._gnss = self._gnss.set_index("DATE")
-
-        if self._anl.empty:
-            print("No analysed data!")
-        else:
-            print("Analysed data reading: OK")
-            no = len(self._anl)
-            print("Number of samples is: {0}".format(no))
-
-        # ============================================================== reference time series
-        self._read_txt_file()
-        # for purpose as in gnss case
-        self._ref = self._era5[["DATE", "pwv"]].copy()
-        # for purpose of data merging
-        self._era5 = self._era5.set_index("DATE")
-
-        if self._ref.empty:
-            print("No reference data!")
-        else:
-            print("\nReference data reading: OK")
-            no = len(self._ref)
-            print("Number of samples is: {0}\n\n".format(no))
-        """
         return 0
 
     def _removeSeasonality(self):
@@ -414,7 +438,18 @@ class process_ts:
             # reference time series. Both type of series are saved in self._ref object. Thus, we will use only
             # one merge process
 
-            mergedSeries = pd.merge(self._anl, self._ref, how='inner', left_index=True, right_index=True)
+            anl = self._anl.copy()
+            ref = self._ref.copy()
+
+            # the median is removed from the both types of series
+            anl.Analysed = anl.Analysed - anl.Analysed.median()
+            ref.Reference = ref.Reference - ref.Reference.median()
+
+            # for purpose of data merging, set index as a key.
+            mAnl = anl.set_index("DATE")
+            mRef = ref.set_index("DATE")
+
+            mergedSeries = pd.merge(mAnl, mRef, how='inner', left_index=True, right_index=True)
             mergedSeries = mergedSeries.reset_index()
 
             # drop nonusefull columns, if exists
@@ -484,6 +519,9 @@ class process_ts:
         # save the full results into the csv format
         self._data.to_csv(out_path+"/change_point_full.csv", index=False)
 
+        # MELTODO in next future
+        # ######################
+
         # create the protocol that covers only change point informations (loop, intervals, sizes, etc)
         # change_points_info.txt
 
@@ -494,8 +532,11 @@ class process_ts:
         # change_points_eval.txt
 
         # create the protocol that covers statistics of analysed time series before and after the
-        # homogenization
+        # homogenization and/or info about the outliers detection
         # change_point_stat.txt
+
+        # list of time where the change points were detected and their original values.
+        # change_point_outliers.csv
 
         # save the log file (covers the full process of homogenization, what is processed, errors, time of
         # processing etc)
@@ -503,89 +544,9 @@ class process_ts:
 
         return 0
 
-    def _read_txt_file(self):
-        """
-        Function reads the txt files
-
-        Returns
-        -------
-        int
-            DESCRIPTION.
-
-        """
-
-        # dfull contains full data over the years with original time resolution
-        self._beg = self._beg_reset
-        self._end = self._end_reset
-        self._dffull = pd.DataFrame()
-
-        while self._beg <= self._end:
-
-            year = self._beg
-
-            localpath = "Data/ERA5/"+str(year)+"/"
-
-            # list of all sub folders in "year" folder
-            listOfMonths = []
-            for (dir_path, dir_names, file_names) in walk(localpath):
-                listOfMonths.extend(dir_names)
-
-            # list over the months
-            listOfMonths.sort()
-
-            for iMonth in listOfMonths:
-
-                mFile = Path("Data/ERA5/"+str(year)+"/"+iMonth+"/"+self._station+".txt")
-
-                # print(mFile)
-
-                if mFile.is_file():
-
-                    data = pd.read_csv("Data/ERA5/"+str(year)+"/"+iMonth+"/"+self._station +
-                                       ".txt", sep="       ", encoding="ascii", engine='python', header=None,
-                                       names=["DATE", "x", "pwv"])
-
-                    data["DATE"] = pd.to_datetime(
-                        data["DATE"], format="%Y-%m-%d %H:%M:%S", errors='coerce')
-                    # data["pwv"] = data.pwv/100
-
-                    self._dffull = pd.concat([self._dffull, data])
-                else:
-
-                    self._beg += 1
-                    continue
-
-            # data["DATE"] = pd.to_datetime(data["DATE"], format="%Y-%m-%d %H:%M:%S", errors='coerce')
-            data["pwv"] = data.pwv/10
-
-            # self._dffull = pd.concat([self._dffull, data])
-            self._beg += 1
-
-        # check the size
-        if self._dffull.empty:
-
-            print("No TXT data! Check the Data folder and/or config.json file!")
-            sys.exit()
-        else:
-
-            # filter data and then reduce the number of data
-            idxs = ((self._dffull["DATE"].dt.hour == 0) | (self._dffull["DATE"].dt.hour == 6) | (
-                self._dffull["DATE"].dt.hour == 12) | (self._dffull["DATE"].dt.hour == 18)) & \
-                (self._dffull["DATE"].dt.minute == 0)
-
-            self._era5 = self._dffull[idxs].copy()
-
-            # substract the median from the pwv vector
-            self._era5.pwv = self._era5.pwv - self._era5.pwv.median()
-            self._era5 = self._era5.reset_index()
-            self._era5 = self._era5.drop(columns="index")
-            self._era5 = self._era5.drop(["x"], axis=1)
-
-        return 0
-
     def _read_xlsx_file(self, full_file_path, type_of_data="Analysed"):
         """
-        The function reads the Excel file and returns the required dat formated in dataframe object.
+        The function reads the Excel file and returns the required data formated in dataframe object.
         """
 
         df = pd.read_excel(full_file_path)
@@ -594,52 +555,13 @@ class process_ts:
 
         return df
 
-    def _read_npz_file(self):
+    def _read_csv_file(self, full_file_path, type_of_data="Analysed"):
         """
-        The funtion process the npz file
+        The function reads the CSV file and returns the required data formated in dataframe object.
         """
 
-        # dfull contains full data over the years with 5 min time resolution
-        self._dffull = pd.DataFrame()
-        while self._beg <= self._end:
+        df = pd.read_csv(full_file_path)
 
-            year = self._beg
+        df.rename(columns={df.columns[1]: type_of_data}, inplace=True)
 
-            mFile = Path("Data/GNSS/"+str(year)+"/"+self._station+".npz")
-            if mFile.is_file():
-
-                data = np.load("Data/GNSS/"+str(year)+"/"+self._station+".npz", allow_pickle=True)
-            else:
-                self._beg += 1
-                continue
-
-            df = pd.DataFrame()
-
-            for key, val in data.items():
-
-                df[key] = val
-
-            self._dffull = pd.concat([self._dffull, df])
-            self._beg += 1
-
-        # check the size
-        if self._dffull.empty:
-
-            print("No NPZ data! Check the Data folder and/or config.json file!")
-            sys.exit()
-        else:
-
-            # filter data and then reduce the number of data
-            idxs = ((self._dffull["DATE"].dt.hour == 0) | (self._dffull["DATE"].dt.hour == 6) | (
-                self._dffull["DATE"].dt.hour == 12) | (self._dffull["DATE"].dt.hour == 18)) & \
-                (self._dffull["DATE"].dt.minute == 0)
-
-            self._gnss = self._dffull[idxs].copy()
-
-            # substract the median from the pwv vector
-            self._gnss.pwv = self._gnss.pwv - self._gnss.pwv.median()
-
-            self._gnss = self._gnss.reset_index()
-            self._gnss = self._gnss.drop(columns="index")
-
-        return 0
+        return df

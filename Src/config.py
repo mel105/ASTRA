@@ -33,7 +33,7 @@ class config:
         Returns
         -------
         TYPE string
-            DESCRIPTION. 
+            DESCRIPTION.
 
         """
         return self._inp_file_name
@@ -43,7 +43,7 @@ class config:
         Returns
         -------
         TYPE string
-            DESCRIPTION. 
+            DESCRIPTION.
         """
         return self._inp_local_path
 
@@ -54,7 +54,7 @@ class config:
          Returns
          -------
          TYPE string
-             DESCRIPTION. 
+             DESCRIPTION.
 
          """
         return self._out_file_name
@@ -109,6 +109,45 @@ class config:
         """
         return self._preprocess
 
+    def get_cnd_actual_data(self):
+        """
+        Function returns minimal length of time series that is accepted to change point detection. NOTE that
+        this costant depends on time span. For instat, assume that we process daily data, then one may set 365
+        that means thet we want process data that contains more than 365 days.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        """
+        return self._actual_data
+
+    def get_cnd_orig_idx(self):
+        """
+        Function returns the condition that evaulates the actually detected change point index. Assess if the
+        detected change point already exists in the container, where the detected change points are sorted.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        """
+        return self._orig_idx
+
+    def get_cnd_ci_prob(self):
+
+        return self._ci_prob
+
+    def get_cnd_norm_acorr(self):
+
+        return self._norm_acorr
+
+    def get_cnd_cv_prob(self):
+
+        return self._cv
+
     # protected functions
 
     def _load_config(self):
@@ -135,3 +174,10 @@ class config:
         self._preprocess = cf["set_general"]["preprocess"]
         self._BEG = cf["set_general"]["BEG"]
         self._END = cf["set_general"]["END"]
+
+        # conditions
+        self._actual_data = cf["set_conditions"]["cnd_actual_data"]
+        self._orig_idx = cf["set_conditions"]["cnd_orig_idx"]
+        self._ci_prob = cf["set_conditions"]["cnd_ci_prob"]
+        self._norm_acorr = cf["set_conditions"]["cnd_norm_acorr"]
+        self._cv = cf["set_conditions"]["cnd_cv"]

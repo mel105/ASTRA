@@ -95,6 +95,7 @@ def report():
     idx = 0
     list_of_file_names = []
     list_of_links = []
+    list_of_chpNo = []
 
     while idx < len(configObj.get_inp_file_name()):
 
@@ -118,11 +119,13 @@ def report():
         # Data collection
         list_of_file_names.append(configObj.get_inp_file_name()[idx])
         list_of_links.append(f"<a href={second_lev}>Link</a>")
+        list_of_chpNo.append(len(tsObj.get_chp()))
 
         idx += 1
     #
+    info_summary = {}
     info_summary = {"File Name": list_of_file_names, "Link": list_of_links,
-                    "No. of detected change point(s)": len(tsObj.get_chp())}
+                    "No. of detected change point(s)": list_of_chpNo}
 
     info_table = pd.DataFrame(info_summary)
 
@@ -155,7 +158,7 @@ def report():
     return configObj, tsObj
 
 
-# PWV Report
+# Report
 if __name__ == "__main__":
 
     cfg, ts = report()
